@@ -1,0 +1,24 @@
+﻿<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void {
+        Schema::create('vendite_righe', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('vendita_id')->constrained('vendite')->cascadeOnDelete();
+            $table->foreignId('prodotto_id')->nullable()->constrained('prodotti');
+            $table->string('nome_prodotto', 200)->nullable();
+            $table->decimal('pezzatura_gr', 10, 3)->nullable();
+            $table->string('um', 10)->nullable();
+            $table->decimal('quantita_pz', 10, 3)->nullable();
+            $table->decimal('quantita_kg', 10, 3);
+            $table->string('lotto', 100)->nullable();
+            $table->string('lotto_esterno', 100)->nullable();
+            $table->date('scadenza')->nullable();
+            $table->timestamps();
+        });
+    }
+    public function down(): void { Schema::dropIfExists('vendite_righe'); }
+};
