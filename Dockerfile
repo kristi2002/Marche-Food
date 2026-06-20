@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json vite.config.js ./
 COPY resources/js ./resources/js
 COPY resources/css ./resources/css
+COPY public ./public
 RUN npm ci && npm run build
 
 # Stage 2: PHP + Apache
