@@ -23,11 +23,8 @@ RUN docker-php-ext-install \
     pdo \
     pdo_pgsql \
     pgsql \
-    mbstring \
-    xml \
     zip \
-    bcmath \
-    tokenizer
+    bcmath
 
 RUN a2enmod rewrite
 
