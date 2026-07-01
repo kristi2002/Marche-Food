@@ -23,17 +23,17 @@
       <Column v-if="isAdmin" header="Azioni" style="width:100px">
         <template #body="{ data }">
           <div style="display:flex;gap:0.4rem">
-            <Link :href="`/materie-prime/${data.id}/edit`"><Button icon="pi pi-pencil" size="small" outlined /></Link>
-            <Button icon="pi pi-trash" size="small" outlined severity="danger" @click="confirmDelete(data)" />
+            <Link :href="`/materie-prime/${data.id}/edit`"><Button icon="pi pi-pencil" aria-label="Modifica" size="small" outlined /></Link>
+            <Button icon="pi pi-trash" aria-label="Elimina" size="small" outlined severity="danger" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>
       <template #empty><div class="empty-state">Nessuna materia prima trovata.</div></template>
     </DataTable>
     <div v-if="materie.last_page > 1" class="pagination">
-      <Button icon="pi pi-chevron-left" outlined size="small" :disabled="!materie.prev_page_url" @click="router.visit(materie.prev_page_url)" />
+      <Button icon="pi pi-chevron-left" aria-label="Pagina precedente" outlined size="small" :disabled="!materie.prev_page_url" @click="router.visit(materie.prev_page_url)" />
       <span class="page-info">{{ materie.current_page }} / {{ materie.last_page }} ({{ materie.total }})</span>
-      <Button icon="pi pi-chevron-right" outlined size="small" :disabled="!materie.next_page_url" @click="router.visit(materie.next_page_url)" />
+      <Button icon="pi pi-chevron-right" aria-label="Pagina successiva" outlined size="small" :disabled="!materie.next_page_url" @click="router.visit(materie.next_page_url)" />
     </div>
   </AppLayout>
 </template>

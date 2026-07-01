@@ -1,16 +1,20 @@
 <template>
   <div class="app-shell">
+    <a href="#main-content" class="skip-link">Vai al contenuto</a>
+    <!-- Mobile sidebar overlay -->
+    <div v-if="sidebarOpen" class="sidebar-overlay" @click="sidebarOpen = false" />
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ 'sidebar-open': sidebarOpen }">
       <div class="sidebar-logo">
-        <img src="/favicon.png" alt="MIF" class="logo-img" />
+        <img src="/favicon.png" alt="Marche International Food" class="logo-img" />
         <div class="logo-text">
           <span class="logo-main">Marche Int. Food</span>
           <span class="logo-sub">S.r.l.</span>
         </div>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="Navigazione principale" @click="sidebarOpen = false">
         <Link href="/" :class="['nav-item', page.url === '/' ? 'active' : '']">
           <i class="pi pi-home" /> Dashboard
         </Link>
@@ -60,6 +64,9 @@
         <Link href="/produzioni" :class="['nav-item', isActive('/produzioni')]">
           <i class="pi pi-cog" /> Produzioni
         </Link>
+        <Link href="/produzioni/kiosk" :class="['nav-item', isActive('/produzioni/kiosk')]">
+          <i class="pi pi-tablet" /> Kiosk Produzione
+        </Link>
         <template v-if="isAdmin">
           <Link href="/flussi" :class="['nav-item', isActive('/flussi')]">
             <i class="pi pi-sitemap" /> Flussi di Lavorazione
@@ -67,8 +74,22 @@
         </template>
 
         <div class="nav-section-label">Tracciabilità</div>
-        <Link href="/tracciabilita" :class="['nav-item', isActive('/tracciabilita')]">
+        <Link href="/cerca" :class="['nav-item', isActive('/cerca')]" @click="sidebarOpen = false">
+          <i class="pi pi-search" /> Ricerca Globale
+        </Link>
+        <Link href="/tracciabilita" :class="['nav-item', isActive('/tracciabilita')]" @click="sidebarOpen = false">
           <i class="pi pi-search" /> Ricerca Lotti
+        </Link>
+        <Link href="/recall" :class="['nav-item', isActive('/recall')]" @click="sidebarOpen = false">
+          <i class="pi pi-exclamation-triangle" /> Rapporto Recall
+        </Link>
+
+        <div class="nav-section-label">Reportistica</div>
+        <Link href="/report" :class="['nav-item', isActive('/report')]">
+          <i class="pi pi-chart-bar" /> Report Gestionale
+        </Link>
+        <Link href="/magazzino" :class="['nav-item', isActive('/magazzino')]">
+          <i class="pi pi-inbox" /> Giacenze Magazzino
         </Link>
 
         <div class="nav-section-label">Account</div>
@@ -84,6 +105,9 @@
           <Link href="/import" :class="['nav-item', isActive('/import')]">
             <i class="pi pi-database" /> Import Dati Storici
           </Link>
+          <Link href="/audit" :class="['nav-item', isActive('/audit')]">
+            <i class="pi pi-history" /> Log Attività
+          </Link>
         </template>
       </nav>
     </aside>
@@ -93,9 +117,40 @@
       <!-- Top header -->
       <header class="topbar">
         <div class="topbar-left">
+          <button class="hamburger" @click="sidebarOpen = !sidebarOpen" aria-label="Menu">
+            <i class="pi pi-bars" />
+          </button>
           <span class="topbar-title">Marche International Food S.r.l.</span>
+          <form class="global-search" @submit.prevent="globalSearch" role="search">
+            <i class="pi pi-search" aria-hidden="true" />
+            <input v-model="globalQuery" type="search" placeholder="Cerca..." aria-label="Ricerca globale" />
+          </form>
         </div>
         <div class="topbar-right">
+          <div class="notif-wrap">
+            <button class="notif-bell" type="button" :aria-label="'Notifiche: ' + notificheCount + ' non lette'" aria-haspopup="true" :aria-expanded="notifOpen ? 'true' : 'false'" @click="notifOpen = !notifOpen">
+              <i class="pi pi-bell" aria-hidden="true" />
+              <span v-if="notificheCount > 0" class="notif-badge">{{ notificheCount }}</span>
+            </button>
+            <div v-if="notifOpen" class="notif-backdrop" @click="notifOpen = false" />
+            <div v-if="notifOpen" class="notif-dropdown" role="menu">
+              <div class="notif-dd-head">
+                <span>Notifiche</span>
+                <button v-if="notifiche.length" type="button" class="notif-dd-clear" @click="dismissAll">Segna tutte lette</button>
+              </div>
+              <div v-if="!notifiche.length" class="notif-dd-empty">Nessuna notifica</div>
+              <ul v-else class="notif-dd-list">
+                <li v-for="n in notifiche" :key="n.id" :class="['notif-dd-item', n.livello]">
+                  <Link :href="n.url || '/notifiche'" class="notif-dd-link" @click="notifOpen = false">
+                    <span class="notif-dd-title">{{ n.titolo }}</span>
+                    <span class="notif-dd-msg">{{ n.messaggio }}</span>
+                  </Link>
+                  <button type="button" class="notif-dd-x" aria-label="Ignora notifica" @click.stop="dismiss(n)"><i class="pi pi-times" aria-hidden="true" /></button>
+                </li>
+              </ul>
+              <Link href="/notifiche" class="notif-dd-all" @click="notifOpen = false">Vedi tutte</Link>
+            </div>
+          </div>
           <span class="user-role-badge" :class="isAdmin ? 'badge-admin' : 'badge-operator'">
             {{ isAdmin ? 'Admin' : 'Operatore' }}
           </span>
@@ -112,7 +167,7 @@
       <Toast position="top-right" />
       <ConfirmDialog />
 
-      <main class="content">
+      <main id="main-content" class="content" tabindex="-1">
         <slot />
       </main>
     </div>
@@ -120,8 +175,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
@@ -129,9 +184,20 @@ import { watchEffect } from 'vue';
 
 const page = usePage();
 const toast = useToast();
+const sidebarOpen = ref(false);
+const globalQuery = ref('');
+function globalSearch() {
+  if (globalQuery.value.trim().length < 2) return;
+  router.get('/cerca', { q: globalQuery.value }, { preserveState: true });
+}
 
 const auth = computed(() => page.props.auth?.user);
 const isAdmin = computed(() => auth.value?.role === 'admin');
+const notificheCount = computed(() => page.props.notificheCount ?? 0);
+const notifiche = computed(() => page.props.notifiche ?? []);
+const notifOpen = ref(false);
+function dismiss(n) { router.post(`/notifiche/${n.id}/dismiss`, {}, { preserveScroll: true, preserveState: true }); }
+function dismissAll() { router.post('/notifiche/dismiss-all', {}, { preserveScroll: true, preserveState: true, onSuccess: () => { notifOpen.value = false; } }); }
 
 watchEffect(() => {
   if (page.props.flash?.success) {
@@ -139,6 +205,10 @@ watchEffect(() => {
   }
   if (page.props.flash?.error) {
     toast.add({ severity: 'error', summary: 'Errore', detail: page.props.flash.error, life: 4000 });
+  }
+  // Optimistic-locking conflict (surfaced globally so every form benefits)
+  if (page.props.errors?.updated_at) {
+    toast.add({ severity: 'warn', summary: 'Conflitto di modifica', detail: page.props.errors.updated_at, life: 6000 });
   }
 });
 
@@ -353,4 +423,98 @@ function isActive(path) {
   padding: 2rem;
   flex: 1;
 }
+
+/* ── Hamburger (hidden on desktop) ───────────────────────────────────── */
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1.1rem;
+  color: #1c3d28;
+  margin-right: 0.5rem;
+}
+
+/* ── Sidebar overlay (mobile) ─────────────────────────────────────────── */
+.sidebar-overlay {
+  display: none;
+}
+
+/* ── Mobile breakpoint ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.12);
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0,0,0,0.35);
+  }
+
+  .content {
+    padding: 1rem;
+  }
+
+  .topbar {
+    padding: 0 1rem;
+  }
+
+  .topbar-title {
+    font-size: 0.78rem;
+  }
+
+  .user-name span,
+  .user-role-badge {
+    display: none;
+  }
+}
+
+.global-search { display:flex; align-items:center; gap:0.4rem; background:#f4f7f4; border:1px solid #e2e8f0; border-radius:6px; padding:0.25rem 0.6rem; margin-left:1rem; }
+.global-search i { color:#94a3b8; font-size:0.8rem; }
+.global-search input { border:none; background:transparent; outline:none; font-size:0.82rem; width:150px; color:#374151; }
+@media (max-width:768px){ .global-search { display:none; } }
+
+.skip-link { position:absolute; left:-999px; top:0; z-index:1000; background:#1c3d28; color:#fff; padding:0.5rem 1rem; border-radius:0 0 6px 0; }
+.skip-link:focus { left:0; }
+
+
+.notif-wrap { position:relative; }
+.notif-bell { position:relative; display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:8px; color:#4b5563; background:none; border:none; cursor:pointer; }
+.notif-bell:hover { background:#f0faf2; color:#2a6941; }
+.notif-backdrop { position:fixed; inset:0; z-index:150; }
+.notif-dropdown { position:absolute; right:0; top:44px; width:340px; max-height:70vh; overflow-y:auto; background:#fff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,0.15); z-index:151; }
+.notif-dd-head { display:flex; justify-content:space-between; align-items:center; padding:0.75rem 1rem; border-bottom:1px solid #f1f5f9; font-weight:700; font-size:0.85rem; color:#1e293b; }
+.notif-dd-clear { background:none; border:none; color:#2a6941; font-size:0.75rem; cursor:pointer; }
+.notif-dd-empty { padding:1.5rem; text-align:center; color:#94a3b8; font-size:0.85rem; }
+.notif-dd-list { list-style:none; margin:0; padding:0; }
+.notif-dd-item { display:flex; align-items:flex-start; gap:0.5rem; padding:0.6rem 0.85rem; border-bottom:1px solid #f6f8f6; border-left:3px solid transparent; }
+.notif-dd-item.danger { border-left-color:#dc2626; }
+.notif-dd-item.warning { border-left-color:#d97706; }
+.notif-dd-item.info { border-left-color:#2563eb; }
+.notif-dd-link { flex:1; text-decoration:none; display:flex; flex-direction:column; gap:2px; }
+.notif-dd-title { font-size:0.82rem; font-weight:700; color:#1e293b; }
+.notif-dd-msg { font-size:0.76rem; color:#64748b; }
+.notif-dd-x { background:none; border:none; color:#cbd5e1; cursor:pointer; padding:2px; }
+.notif-dd-x:hover { color:#dc2626; }
+.notif-dd-all { display:block; text-align:center; padding:0.65rem; font-size:0.8rem; color:#2a6941; text-decoration:none; border-top:1px solid #f1f5f9; font-weight:600; }
+.notif-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; padding:0 4px; background:#dc2626; color:#fff; font-size:0.62rem; font-weight:700; border-radius:99px; display:flex; align-items:center; justify-content:center; }
 </style>

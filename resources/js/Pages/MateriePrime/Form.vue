@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="page-header">
       <h1 class="page-title">{{ isEdit ? 'Modifica Materia Prima' : 'Nuova Materia Prima' }}</h1>
-      <Link href="/materie-prime"><Button label="Annulla" outlined icon="pi pi-arrow-left" /></Link>
+      <Link href="/materie-prime"><Button label="Annulla" outlined icon="pi pi-arrow-left" aria-label="Indietro" /></Link>
     </div>
     <form @submit.prevent="submit" class="form-card">
       <section class="form-section">
@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from 'primevue/button';
@@ -40,6 +40,12 @@ const form = useForm({
   codice: props.materia?.codice ?? null,
   nome:   props.materia?.nome   ?? '',
 });
+watch(() => props.materia, (m) => {
+  form.codice = m?.codice ?? null;
+  form.nome   = m?.nome   ?? '';
+  form.clearErrors();
+});
+
 function submit() {
   isEdit.value ? form.put(`/materie-prime/${props.materia.id}`) : form.post('/materie-prime');
 }

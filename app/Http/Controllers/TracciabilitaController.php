@@ -4,11 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\AcquistoRiga;
 use App\Models\Produzione;
+use App\Models\VenditaRiga;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class TracciabilitaController extends Controller
 {
+    private const LIMIT_RIGHE    = 50;
+    private const LIMIT_PROD     = 20;
+    private const LIMIT_VENDITE  = 20;
+
     public function index()
     {
         return Inertia::render('Tracciabilita', ['risultati' => null, 'query' => '']);
@@ -27,39 +33,62 @@ class TracciabilitaController extends Controller
         }
 
         $term = "%{$q}%";
+        // PostgreSQL uses ILIKE; SQLite (tests) uses case-insensitive LIKE.
+        $op = DB::connection()->getDriverName() === 'pgsql' ? $op : 'like';
 
-        // ── 1. Forward trace: search purchase lots ───────────────────────────
-        $righeAcquisto = AcquistoRiga::with([
+        // ── 1. Forward trace: purchase lots ──────────────────────────────────
+        $righeQuery = AcquistoRiga::with([
                 'acquisto.fornitore',
                 'produzioniMateriePrime.produzione.scheda.prodotto',
             ])
-            ->where(function ($query) use ($term) {
-                $query->where('lotto', 'ilike', $term)
-                      ->orWhere('lotto_esterno', 'ilike', $term)
-                      ->orWhere('nome_prodotto', 'ilike', $term);
+            ->where(function ($query) use ($term, $op) {
+                $query->where('lotto', $op, $term)
+                      ->orWhere('lotto_esterno', $op, $term)
+                      ->orWhere('nome_prodotto', $op, $term);
             })
-            ->orderBy('data_in', 'desc')
-            ->limit(50)
-            ->get();
+            ->orderBy('data_in', 'desc');
 
-        // ── 2. Reverse trace: search production lots ─────────────────────────
-        $produzioni = Produzione::with([
+        $totalRighe    = (clone $righeQuery)->count();
+        $righeAcquisto = $righeQuery->limit(self::LIMIT_RIGHE)->get();
+
+        // ── 2. Reverse trace: production lots ────────────────────────────────
+        $prodQuery = Produzione::with([
                 'scheda.prodotto',
                 'materiePrime.materiaPrima',
                 'materiePrime.acquistoRiga.acquisto.fornitore',
             ])
-            ->where(function ($query) use ($term) {
-                $query->where('lotto_produzione', 'ilike', $term)
-                      ->orWhereHas('scheda.prodotto', fn($q) => $q->where('nome', 'ilike', $term));
+            ->where(function ($query) use ($term, $op) {
+                $query->where('lotto_produzione', $op, $term)
+                      ->orWhereHas('scheda.prodotto', fn($q) => $q->where('nome', $op, $term));
             })
-            ->orderBy('data_produzione', 'desc')
-            ->limit(20)
-            ->get();
+            ->orderBy('data_produzione', 'desc');
+
+        $totalProduzioni = (clone $prodQuery)->count();
+        $produzioni      = $prodQuery->limit(self::LIMIT_PROD)->get();
+
+        // ── 3. GAP-D6: sales leg — find finished lots delivered to customers ─
+        $venditeQuery = VenditaRiga::with(['vendita.cliente'])
+            ->where(function ($query) use ($term, $op) {
+                $query->where('lotto', $op, $term)
+                      ->orWhere('lotto_esterno', $op, $term)
+                      ->orWhere('nome_prodotto', $op, $term);
+            })
+            ->orderBy('id', 'desc');
+
+        $totalVendite  = (clone $venditeQuery)->count();
+        $venditeRighe  = $venditeQuery->limit(self::LIMIT_VENDITE)->get();
 
         return Inertia::render('Tracciabilita', [
             'risultati' => [
-                'righe_acquisto' => $righeAcquisto,
-                'produzioni'     => $produzioni,
+                'righe_acquisto'    => $righeAcquisto,
+                'produzioni'        => $produzioni,
+                'vendite_righe'     => $venditeRighe,
+                'total_righe'       => $totalRighe,
+                'total_produzioni'  => $totalProduzioni,
+                'total_vendite'     => $totalVendite,
+                'limit_righe'       => self::LIMIT_RIGHE,
+                'limit_produzioni'  => self::LIMIT_PROD,
+                'limit_vendite'     => self::LIMIT_VENDITE,
             ],
             'query' => $q,
         ]);

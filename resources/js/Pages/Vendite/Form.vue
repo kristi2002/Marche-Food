@@ -3,7 +3,7 @@
     <div class="page-header">
       <h1 class="page-title">{{ isEdit ? 'Modifica Vendita' : 'Nuova Vendita' }}</h1>
       <Link href="/vendite">
-        <Button label="Annulla" outlined icon="pi pi-arrow-left" />
+        <Button label="Annulla" outlined icon="pi pi-arrow-left" aria-label="Indietro" />
       </Link>
     </div>
 
@@ -91,6 +91,7 @@
                 <th style="width:130px">Lotto interno</th>
                 <th style="width:130px">Lotto esterno</th>
                 <th style="width:130px">Scadenza</th>
+                <th style="min-width:220px">Lotto acquisto (rivendita diretta)</th>
                 <th style="width:44px"></th>
               </tr>
             </thead>
@@ -148,9 +149,22 @@
                   <DatePicker v-model="riga.scadenza" date-format="dd/mm/yy" fluid size="small" />
                 </td>
                 <td>
+                  <Select
+                    v-model="riga.acquisto_riga_id"
+                    :options="acquisti_righe ?? []"
+                    :option-label="acquistoRigaLabel"
+                    option-value="id"
+                    placeholder="— nessuno —"
+                    :show-clear="true"
+                    filter
+                    fluid
+                    size="small"
+                  />
+                </td>
+                <td>
                   <Button
                     type="button"
-                    icon="pi pi-trash"
+                    icon="pi pi-trash" aria-label="Elimina"
                     size="small"
                     text
                     severity="danger"
@@ -179,7 +193,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from 'primevue/button';
@@ -189,8 +203,9 @@ import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
 
 const props = defineProps({
-  vendita: Object,
-  clienti: Array,
+  vendita:         Object,
+  clienti:         Array,
+  acquisti_righe:  Array,
 });
 
 const isEdit = computed(() => !!props.vendita);
@@ -208,16 +223,25 @@ const umOptions = [
   { label: 'Box', value: 'box' },
 ];
 
+function acquistoRigaLabel(r) {
+  const lotto    = r.lotto || r.lotto_esterno || '—';
+  const fornitore = r.acquisto?.fornitore?.ragione_sociale ?? '?';
+  const ddt      = r.acquisto?.numero_documento ?? '?';
+  return `${ddt} | ${fornitore} | ${r.nome_prodotto} | Lotto: ${lotto}`;
+}
+
 function emptyRiga() {
   return {
-    nome_prodotto: '',
-    pezzatura_gr:  null,
-    um:            'pz',
-    quantita_pz:   null,
-    quantita_kg:   null,
-    lotto:         '',
-    lotto_esterno: '',
-    scadenza:      null,
+    id:               null,
+    nome_prodotto:    '',
+    pezzatura_gr:     null,
+    um:               'pz',
+    quantita_pz:      null,
+    quantita_kg:      null,
+    lotto:            '',
+    lotto_esterno:    '',
+    scadenza:         null,
+    acquisto_riga_id: null,
   };
 }
 
@@ -226,6 +250,7 @@ function parseDate(d) {
 }
 
 const form = useForm({
+  updated_at:      props.vendita?.updated_at ?? null,
   cliente_id:      props.vendita?.cliente_id      ?? null,
   numero_documento: props.vendita?.numero_documento ?? '',
   data_documento:  props.vendita?.data_documento  ? new Date(props.vendita.data_documento) : null,
@@ -233,16 +258,41 @@ const form = useForm({
   note:            props.vendita?.note            ?? '',
   righe: props.vendita?.righe?.length
     ? props.vendita.righe.map(r => ({
-        nome_prodotto: r.nome_prodotto ?? '',
-        pezzatura_gr:  r.pezzatura_gr  ? Number(r.pezzatura_gr)  : null,
-        um:            r.um            ?? 'pz',
-        quantita_pz:   r.quantita_pz   ? Number(r.quantita_pz)  : null,
-        quantita_kg:   r.quantita_kg   ? Number(r.quantita_kg)  : null,
-        lotto:         r.lotto         ?? '',
-        lotto_esterno: r.lotto_esterno ?? '',
-        scadenza:      parseDate(r.scadenza),
+        id:               r.id               ?? null,
+        nome_prodotto:    r.nome_prodotto    ?? '',
+        pezzatura_gr:     r.pezzatura_gr     ? Number(r.pezzatura_gr)  : null,
+        um:               r.um               ?? 'pz',
+        quantita_pz:      r.quantita_pz      ? Number(r.quantita_pz)  : null,
+        quantita_kg:      r.quantita_kg      ? Number(r.quantita_kg)  : null,
+        lotto:            r.lotto            ?? '',
+        lotto_esterno:    r.lotto_esterno    ?? '',
+        scadenza:         parseDate(r.scadenza),
+        acquisto_riga_id: r.acquisto_riga_id ?? null,
       }))
     : [emptyRiga()],
+});
+
+watch(() => props.vendita, (v) => {
+  form.cliente_id       = v?.cliente_id       ?? null;
+  form.numero_documento = v?.numero_documento ?? '';
+  form.data_documento   = v?.data_documento   ? new Date(v.data_documento) : null;
+  form.tipo_documento   = v?.tipo_documento   ?? 'DDT';
+  form.note             = v?.note             ?? '';
+  form.righe = v?.righe?.length
+    ? v.righe.map(r => ({
+        id:               r.id               ?? null,
+        nome_prodotto:    r.nome_prodotto    ?? '',
+        pezzatura_gr:     r.pezzatura_gr     ? Number(r.pezzatura_gr)  : null,
+        um:               r.um               ?? 'pz',
+        quantita_pz:      r.quantita_pz      ? Number(r.quantita_pz)  : null,
+        quantita_kg:      r.quantita_kg      ? Number(r.quantita_kg)  : null,
+        lotto:            r.lotto            ?? '',
+        lotto_esterno:    r.lotto_esterno    ?? '',
+        scadenza:         parseDate(r.scadenza),
+        acquisto_riga_id: r.acquisto_riga_id ?? null,
+      }))
+    : [emptyRiga()];
+  form.clearErrors();
 });
 
 function addRiga() {

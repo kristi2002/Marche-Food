@@ -3,7 +3,7 @@
     <div class="page-header">
       <h1 class="page-title">{{ isEdit ? 'Modifica Cliente' : 'Nuovo Cliente' }}</h1>
       <Link href="/clienti">
-        <Button label="Annulla" outlined icon="pi pi-arrow-left" />
+        <Button label="Annulla" outlined icon="pi pi-arrow-left" aria-label="Indietro" />
       </Link>
     </div>
 
@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from 'primevue/button';
@@ -93,6 +93,18 @@ const form = useForm({
   telefono:        props.cliente?.telefono        ?? '',
   attivo:          props.cliente?.attivo          ?? true,
   note:            props.cliente?.note            ?? '',
+});
+
+watch(() => props.cliente, (c) => {
+  form.codice_cliente  = c?.codice_cliente  ?? '';
+  form.ragione_sociale = c?.ragione_sociale ?? '';
+  form.piva            = c?.piva            ?? '';
+  form.indirizzo       = c?.indirizzo       ?? '';
+  form.email           = c?.email           ?? '';
+  form.telefono        = c?.telefono        ?? '';
+  form.attivo          = c?.attivo          ?? true;
+  form.note            = c?.note            ?? '';
+  form.clearErrors();
 });
 
 function submit() {

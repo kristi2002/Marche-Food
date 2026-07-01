@@ -22,6 +22,11 @@
       <Column header="Cliente">
         <template #body="{ data }">{{ data.vendita_riga?.vendita?.cliente?.ragione_sociale ?? '—' }}</template>
       </Column>
+      <Column header="Doc. Vendita" style="width:130px">
+        <template #body="{ data }">
+          <span class="text-muted">{{ data.vendita_riga?.vendita?.numero_documento ?? '—' }}</span>
+        </template>
+      </Column>
       <Column header="Prodotto">
         <template #body="{ data }">{{ data.vendita_riga?.nome_prodotto ?? '—' }}</template>
       </Column>
@@ -31,17 +36,17 @@
       <Column header="Azioni" style="width:100px">
         <template #body="{ data }">
           <div style="display:flex;gap:0.4rem">
-            <Link :href="`/bolle-reso/${data.id}/edit`"><Button icon="pi pi-pencil" size="small" outlined /></Link>
-            <Button v-if="isAdmin" icon="pi pi-trash" size="small" outlined severity="danger" @click="confirmDelete(data)" />
+            <Link :href="`/bolle-reso/${data.id}/edit`"><Button icon="pi pi-pencil" aria-label="Modifica" size="small" outlined /></Link>
+            <Button v-if="isAdmin" icon="pi pi-trash" aria-label="Elimina" size="small" outlined severity="danger" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>
       <template #empty><div class="empty-state">Nessuna bolla reso trovata.</div></template>
     </DataTable>
     <div v-if="bolle.last_page > 1" class="pagination">
-      <Button icon="pi pi-chevron-left" outlined size="small" :disabled="!bolle.prev_page_url" @click="router.visit(bolle.prev_page_url)" />
+      <Button icon="pi pi-chevron-left" aria-label="Pagina precedente" outlined size="small" :disabled="!bolle.prev_page_url" @click="router.visit(bolle.prev_page_url)" />
       <span class="page-info">{{ bolle.current_page }} / {{ bolle.last_page }} ({{ bolle.total }})</span>
-      <Button icon="pi pi-chevron-right" outlined size="small" :disabled="!bolle.next_page_url" @click="router.visit(bolle.next_page_url)" />
+      <Button icon="pi pi-chevron-right" aria-label="Pagina successiva" outlined size="small" :disabled="!bolle.next_page_url" @click="router.visit(bolle.next_page_url)" />
     </div>
   </AppLayout>
 </template>
@@ -80,6 +85,7 @@ function confirmDelete(b) {
 .filters-bar { display:flex; gap:1rem; }
 .row-link { color:#1d4ed8; text-decoration:none; font-weight:500; }
 .row-link:hover { text-decoration:underline; }
+.text-muted { color: #94a3b8; }
 .mt-4 { margin-top:1rem; }
 .pagination { display:flex; align-items:center; gap:1rem; margin-top:1rem; justify-content:center; }
 .page-info { font-size:0.875rem; color:#64748b; }

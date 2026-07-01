@@ -34,8 +34,8 @@
       <Column v-if="isAdmin" header="Azioni" style="width:100px">
         <template #body="{ data }">
           <div style="display:flex;gap:0.4rem">
-            <Link :href="`/prodotti/${data.id}/edit`"><Button icon="pi pi-pencil" size="small" outlined /></Link>
-            <Button icon="pi pi-trash" size="small" outlined severity="danger" @click="confirmDelete(data)" />
+            <Link :href="`/prodotti/${data.id}/edit`"><Button icon="pi pi-pencil" aria-label="Modifica" size="small" outlined /></Link>
+            <Button icon="pi pi-trash" aria-label="Elimina" size="small" outlined severity="danger" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>
@@ -43,9 +43,9 @@
     </DataTable>
 
     <div v-if="prodotti.last_page > 1" class="pagination">
-      <Button icon="pi pi-chevron-left" outlined size="small" :disabled="!prodotti.prev_page_url" @click="router.visit(prodotti.prev_page_url)" />
+      <Button icon="pi pi-chevron-left" aria-label="Pagina precedente" outlined size="small" :disabled="!prodotti.prev_page_url" @click="router.visit(prodotti.prev_page_url)" />
       <span class="page-info">{{ prodotti.current_page }} / {{ prodotti.last_page }} ({{ prodotti.total }})</span>
-      <Button icon="pi pi-chevron-right" outlined size="small" :disabled="!prodotti.next_page_url" @click="router.visit(prodotti.next_page_url)" />
+      <Button icon="pi pi-chevron-right" aria-label="Pagina successiva" outlined size="small" :disabled="!prodotti.next_page_url" @click="router.visit(prodotti.next_page_url)" />
     </div>
   </AppLayout>
 </template>

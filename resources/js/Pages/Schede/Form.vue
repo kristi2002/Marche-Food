@@ -4,9 +4,9 @@
       <h1 class="page-title">{{ isEdit ? 'Modifica Scheda' : 'Nuova Scheda di Produzione' }}</h1>
       <div style="display:flex;gap:0.5rem;align-items:center">
         <Link v-if="isEdit" :href="`/schede/${props.scheda.id}/print`" target="_blank">
-          <Button label="Stampa" icon="pi pi-print" outlined severity="secondary" />
+          <Button label="Stampa" icon="pi pi-print" aria-label="Stampa" outlined severity="secondary" />
         </Link>
-        <Link href="/schede"><Button label="Annulla" outlined icon="pi pi-arrow-left" /></Link>
+        <Link href="/schede"><Button label="Annulla" outlined icon="pi pi-arrow-left" aria-label="Indietro" /></Link>
       </div>
     </div>
 
@@ -78,7 +78,7 @@
                 <td>
                   <Select v-model="r.um" :options="umOpts" option-label="label" option-value="value" placeholder="—" fluid size="small" />
                 </td>
-                <td><Button type="button" icon="pi pi-trash" size="small" text severity="danger" @click="removeRiga('ricette', i)" /></td>
+                <td><Button type="button" icon="pi pi-trash" aria-label="Elimina" size="small" text severity="danger" @click="removeRiga('ricette', i)" /></td>
               </tr>
               <tr v-if="!form.ricette.length">
                 <td colspan="5" style="text-align:center;color:#94a3b8;padding:1rem">Nessun ingrediente aggiunto.</td>
@@ -109,7 +109,7 @@
                 <td><Select v-model="r.materia_prima_id" :options="materie" option-label="nome" option-value="id" placeholder="Seleziona..." filter fluid size="small" /></td>
                 <td><InputNumber v-model="r.litri_grammi" :min-fraction-digits="3" :max-fraction-digits="3" fluid size="small" /></td>
                 <td><Select v-model="r.um" :options="umOpts" option-label="label" option-value="value" placeholder="—" fluid size="small" /></td>
-                <td><Button type="button" icon="pi pi-trash" size="small" text severity="danger" @click="removeRiga('ricette_marinature', i)" /></td>
+                <td><Button type="button" icon="pi pi-trash" aria-label="Elimina" size="small" text severity="danger" @click="removeRiga('ricette_marinature', i)" /></td>
               </tr>
               <tr v-if="!form.ricette_marinature.length">
                 <td colspan="4" style="text-align:center;color:#94a3b8;padding:1rem">Nessun ingrediente aggiunto.</td>
@@ -151,7 +151,7 @@
                 </td>
                 <td><InputText v-model="f.valore_controllo" placeholder="es. ≤ 4°C" fluid size="small" /></td>
                 <td><InputNumber v-model="f.tempo_minuti" :min="0" fluid size="small" /></td>
-                <td><Button type="button" icon="pi pi-trash" size="small" text severity="danger" @click="form.scheda_flussi.splice(i, 1)" /></td>
+                <td><Button type="button" icon="pi pi-trash" aria-label="Elimina" size="small" text severity="danger" @click="form.scheda_flussi.splice(i, 1)" /></td>
               </tr>
               <tr v-if="!form.scheda_flussi.length">
                 <td colspan="4" style="text-align:center;color:#94a3b8;padding:1rem">Nessuna fase aggiunta.</td>
@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from 'primevue/button';
@@ -208,6 +208,26 @@ const form = useForm({
   scheda_flussi: props.scheda?.flussi?.length
     ? props.scheda.flussi.map(f => ({ flusso_id: f.flusso_id, valore_controllo: f.valore_controllo ?? '', tempo_minuti: f.tempo_minuti ?? null }))
     : [],
+});
+
+watch(() => props.scheda, (s) => {
+  form.prodotto_id    = s?.prodotto_id    ?? null;
+  form.modello        = s?.modello        ?? '';
+  form.revisione      = s?.revisione      ?? 0;
+  form.data_revisione = s?.data_revisione ? new Date(s.data_revisione) : null;
+  form.ha_marinatura  = s?.ha_marinatura  ?? false;
+  form.attiva         = s?.attiva         ?? true;
+  form.note           = s?.note           ?? '';
+  form.ricette = s?.ricette?.length
+    ? s.ricette.map(r => ({ materia_prima_id: r.materia_prima_id, percentuale: r.percentuale ? Number(r.percentuale) : null, grammi_per_kg: r.grammi_per_kg ? Number(r.grammi_per_kg) : null, um: r.um ?? 'g' }))
+    : [];
+  form.ricette_marinature = s?.ricette_marinature?.length
+    ? s.ricette_marinature.map(r => ({ materia_prima_id: r.materia_prima_id, litri_grammi: r.litri_grammi ? Number(r.litri_grammi) : null, um: r.um ?? 'lt' }))
+    : [];
+  form.scheda_flussi = s?.flussi?.length
+    ? s.flussi.map(f => ({ flusso_id: f.flusso_id, valore_controllo: f.valore_controllo ?? '', tempo_minuti: f.tempo_minuti ?? null }))
+    : [];
+  form.clearErrors();
 });
 
 function addRiga(key) {

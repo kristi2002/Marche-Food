@@ -4,10 +4,10 @@
       <h1 class="page-title">{{ isEdit ? 'Modifica Acquisto' : 'Nuovo Acquisto' }}</h1>
       <div style="display:flex;gap:0.5rem;align-items:center">
         <Link v-if="isEdit" :href="`/acquisti/${props.acquisto.id}/print`" target="_blank">
-          <Button label="Stampa" icon="pi pi-print" outlined severity="secondary" />
+          <Button label="Stampa" icon="pi pi-print" aria-label="Stampa" outlined severity="secondary" />
         </Link>
         <Link href="/acquisti">
-          <Button label="Annulla" outlined icon="pi pi-arrow-left" />
+          <Button label="Annulla" outlined icon="pi pi-arrow-left" aria-label="Indietro" />
         </Link>
       </div>
     </div>
@@ -181,7 +181,7 @@
                 <td>
                   <Button
                     type="button"
-                    icon="pi pi-trash"
+                    icon="pi pi-trash" aria-label="Elimina"
                     size="small"
                     text
                     severity="danger"
@@ -210,7 +210,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from 'primevue/button';
@@ -241,6 +241,7 @@ const umOptions = [
 
 function emptyRiga(dataIn = null) {
   return {
+    id: null,
     nome_prodotto: '',
     um: 'kg',
     quantita_pz: null,
@@ -259,6 +260,7 @@ function parseDate(d) {
 }
 
 const form = useForm({
+  updated_at:      props.acquisto?.updated_at ?? null,
   fornitore_id:    props.acquisto?.fornitore_id    ?? null,
   numero_documento: props.acquisto?.numero_documento ?? '',
   data_documento:  props.acquisto?.data_documento  ? new Date(props.acquisto.data_documento) : null,
@@ -266,10 +268,11 @@ const form = useForm({
   note:            props.acquisto?.note            ?? '',
   righe: props.acquisto?.righe?.length
     ? props.acquisto.righe.map(r => ({
-        nome_prodotto: r.nome_prodotto ?? '',
-        um:            r.um            ?? 'kg',
-        quantita_pz:   r.quantita_pz   ? Number(r.quantita_pz)  : null,
-        quantita_kg:   r.quantita_kg   ? Number(r.quantita_kg)  : null,
+        id:               r.id           ?? null,
+        nome_prodotto:    r.nome_prodotto ?? '',
+        um:               r.um            ?? 'kg',
+        quantita_pz:      r.quantita_pz   ? Number(r.quantita_pz)  : null,
+        quantita_kg:      r.quantita_kg   ? Number(r.quantita_kg)  : null,
         lotto:            r.lotto            ?? '',
         lotto_esterno:    r.lotto_esterno    ?? '',
         scadenza:         parseDate(r.scadenza),
@@ -278,6 +281,30 @@ const form = useForm({
         nota_credito_ref: r.nota_credito_ref ?? '',
       }))
     : [emptyRiga()],
+});
+
+watch(() => props.acquisto, (a) => {
+  form.fornitore_id     = a?.fornitore_id     ?? null;
+  form.numero_documento = a?.numero_documento ?? '';
+  form.data_documento   = a?.data_documento   ? new Date(a.data_documento) : null;
+  form.tipo_documento   = a?.tipo_documento   ?? 'DDT';
+  form.note             = a?.note             ?? '';
+  form.righe = a?.righe?.length
+    ? a.righe.map(r => ({
+        id:               r.id               ?? null,
+        nome_prodotto:    r.nome_prodotto    ?? '',
+        um:               r.um               ?? 'kg',
+        quantita_pz:      r.quantita_pz      ? Number(r.quantita_pz)  : null,
+        quantita_kg:      r.quantita_kg      ? Number(r.quantita_kg)  : null,
+        lotto:            r.lotto            ?? '',
+        lotto_esterno:    r.lotto_esterno    ?? '',
+        scadenza:         parseDate(r.scadenza),
+        data_in:          parseDate(r.data_in),
+        data_out:         parseDate(r.data_out),
+        nota_credito_ref: r.nota_credito_ref ?? '',
+      }))
+    : [emptyRiga()];
+  form.clearErrors();
 });
 
 function syncDataIn() {
